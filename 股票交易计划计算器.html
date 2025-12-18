@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>股票交易计划计算器</title>
+    <style>
+        :root {
+            --primary-color: #007bff;
+            --secondary-color: #6c757d;
+            --success-color: #28a745;
+            --danger-color: #dc3545;
+            --light-gray: #f8f9fa;
+            --dark-gray: #343a40;
+            --border-color: #dee2e6;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            color: var(--dark-gray);
+            background-color: #fff;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        h1, h2 {
+            color: var(--primary-color);
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+
+        button {
+            display: inline-block;
+            background-color: var(--primary-color);
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        button:disabled {
+            background-color: var(--secondary-color);
+            cursor: not-allowed;
+        }
+
+        .secondary-button {
+            background-color: var(--secondary-color);
+        }
+
+        .secondary-button:hover {
+            background-color: #5a6268;
+        }
+
+        #file-input {
+            display: none;
+        }
+
+        .file-label {
+            display: inline-block;
+            padding: 10px 20px;
+            background: var(--success-color);
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-bottom: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            background-color: var(--light-gray);
+        }
+
+        tr:hover {
+            background-color: var(--light-gray);
+        }
+
+        .screen {
+            display: none;
+        }
+
+        .screen.active {
+            display: block;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+            padding: 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            background-color: var(--light-gray);
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        .form-group input {
+            width: calc(100% - 20px);
+            padding: 8px 10px;
+            border-radius: 4px;
+            border: 1px solid var(--border-color);
+            font-size: 16px;
+        }
+        
+        .stock-title {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+
+        #results-container .result-card {
+            background-color: var(--light-gray);
+            border-left: 5px solid var(--success-color);
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 5px;
+        }
+        #results-container .result-card h3 {
+             margin-top: 0;
+             color: var(--dark-gray);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>股票交易计划计算器</h1>
+
+        <!-- Screen 1: File Selection and Stock Listing -->
+        <div id="selection-screen" class="screen active">
+            <h2>第一步: 加载并选择持仓</h2>
+
+            <div style="display: flex; align-items: center; margin-bottom: 10px;">
+                <label for="file-input" class="file-label" style="margin-bottom: 0;">点击选择 '当前持仓.csv' 文件</label>
+                <input type="file" id="file-input" accept=".csv">
+                <span style="margin: 0 15px; font-size: 1.1em; color: var(--secondary-color);">或</span>
+                <button id="manual-add-toggle-button" class="secondary-button">手动添加持仓</button>
+            </div>
+            <p id="file-name" style="margin-top: 0; margin-bottom: 20px;"></p>
+
+            <div id="manual-add-form-container" style="display: none; margin-top: 20px;">
+                <form id="manual-add-form" class="form-group" style="background-color: #f0f8ff;">
+                    <h4 style="margin-top:0; margin-bottom: 15px; color: var(--primary-color);">添加新持仓</h4>
+                     <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        <div style="flex: 1 1 120px;">
+                            <label for="manual-code">证券代码</label>
+                            <input type="text" id="manual-code" required>
+                        </div>
+                        <div style="flex: 1 1 120px;">
+                            <label for="manual-name">证券名称</label>
+                            <input type="text" id="manual-name" required>
+                        </div>
+                         <div style="flex: 1 1 100px;">
+                            <label for="manual-price">当前价</label>
+                            <input type="number" id="manual-price" step="0.01" required>
+                        </div>
+                        <div style="flex: 1 1 100px;">
+                            <label for="manual-cost">成本价</label>
+                            <input type="number" id="manual-cost" step="0.01" required>
+                        </div>
+                        <div style="flex: 1 1 120px;">
+                            <label for="manual-quantity">证券数量</label>
+                            <input type="number" id="manual-quantity" step="100" required>
+                        </div>
+                    </div>
+                    <button type="submit" style="margin-top: 15px;">确认添加</button>
+                </form>
+            </div>
+
+            <div id="stock-table-container"></div>
+            <button id="next-button" disabled>下一步</button>
+        </div>
+
+        <!-- Screen 2: Calculation Form -->
+        <div id="calculation-screen" class="screen">
+            <h2>第二步: 填写参数并计算</h2>
+            <form id="calculation-form">
+                <div id="calculation-forms-container"></div>
+                <button type="submit" id="calculate-button">开始计算</button>
+                <button type="button" id="back-button" class="secondary-button">返回上一步</button>
+            </form>
+            <div id="results-container" style="margin-top: 20px;"></div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- Global Variables ---
+            const COMMISSION_RATE = 0.0001; // 万分之一交易佣金
+            let fullStockData = [];
+            let selectedStocks = [];
+            let manualStockCounter = 1;
+
+            // --- DOM Elements ---
+            const fileInput = document.getElementById('file-input');
+            const fileNameDisplay = document.getElementById('file-name');
+            const stockTableContainer = document.getElementById('stock-table-container');
+            const nextButton = document.getElementById('next-button');
+            const manualAddToggleButton = document.getElementById('manual-add-toggle-button');
+            const manualAddFormContainer = document.getElementById('manual-add-form-container');
+            const manualAddForm = document.getElementById('manual-add-form');
+            const manualCodeInput = document.getElementById('manual-code');
+            const manualNameInput = document.getElementById('manual-name');
+            
+            const selectionScreen = document.getElementById('selection-screen');
+            const calculationScreen = document.getElementById('calculation-screen');
+            const calculationFormsContainer = document.getElementById('calculation-forms-container');
+            const calculationForm = document.getElementById('calculation-form');
+            const backButton = document.getElementById('back-button');
+            const resultsContainer = document.getElementById('results-container');
+
+            // --- Event Listeners ---
+            fileInput.addEventListener('change', handleFileSelect);
+            manualAddToggleButton.addEventListener('click', toggleManualAddForm);
+            manualAddForm.addEventListener('submit', handleManualAdd);
+            nextButton.addEventListener('click', showCalculationScreen);
+            backButton.addEventListener('click', showSelectionScreen);
+            calculationForm.addEventListener('submit', handleCalculation);
+
+            // Delegated listeners for the interactive table
+            stockTableContainer.addEventListener('click', handleTableClick);
+            stockTableContainer.addEventListener('change', handleTableChange);
+            stockTableContainer.addEventListener('focusout', handleTableBlur);
+
+            // --- Functions ---
+
+            function handleTableClick(event) {
+                const target = event.target;
+                if (target.matches('#select-all-btn')) {
+                    stockTableContainer.querySelectorAll('.stock-checkbox').forEach(cb => cb.checked = true);
+                    updateNextButtonState();
+                } else if (target.matches('#invert-selection-btn')) {
+                    stockTableContainer.querySelectorAll('.stock-checkbox').forEach(cb => cb.checked = !cb.checked);
+                    updateNextButtonState();
+                } else if (target.matches('.delete-btn')) {
+                    const indexToDelete = parseInt(target.dataset.index, 10);
+                    handleDelete(indexToDelete);
+                }
+            }
+
+            function handleTableChange(event) {
+                if (event.target.matches('.stock-checkbox')) {
+                    updateNextButtonState();
+                }
+            }
+
+            function handleTableBlur(event) {
+                const target = event.target;
+                if (target.matches('.editable')) {
+                    const indexInFullData = parseInt(target.dataset.index, 10);
+                    const field = target.dataset.field;
+                    const newValue = target.textContent.replace(/,/g, '');
+                    const oldValue = fullStockData[indexInFullData][field];
+
+                    const parsedValue = parseFloat(newValue);
+
+                    if (isNaN(parsedValue) || parsedValue < 0) {
+                        alert('请输入有效的正数。');
+                        target.textContent = field === '证券数量' ? parseFloat(oldValue).toLocaleString() : parseFloat(oldValue).toFixed(3);
+                        return;
+                    }
+
+                    fullStockData[indexInFullData][field] = parsedValue.toString();
+                    
+                    if (field === '证券数量') {
+                        target.textContent = parsedValue.toLocaleString();
+                    } else {
+                        target.textContent = parsedValue.toFixed(3);
+                    }
+
+                    // BUG FIX: Re-run validation for the edited stock if its form is visible
+                    const editedStockObject = fullStockData[indexInFullData];
+                    const indexInSelected = selectedStocks.findIndex(s => s === editedStockObject);
+
+                    if (indexInSelected !== -1) {
+                        handlePriceValidation(indexInSelected);
+                    }
+                }
+            }
+            
+            function handleDelete(indexToDelete) {
+                const selectedCodes = new Set();
+                document.querySelectorAll('.stock-checkbox:checked').forEach(cb => {
+                    const index = parseInt(cb.dataset.index, 10);
+                    if (index !== indexToDelete) {
+                        selectedCodes.add(fullStockData[index]['证券代码']);
+                    }
+                });
+
+                fullStockData.splice(indexToDelete, 1);
+                
+                displayStockTable(fullStockData); 
+
+                if (fullStockData.length > 0) {
+                    fullStockData.forEach((stock, newIndex) => {
+                        if (selectedCodes.has(stock['证券代码'])) {
+                            const checkbox = stockTableContainer.querySelector(`.stock-checkbox[data-index="${newIndex}"]`);
+                            if (checkbox) checkbox.checked = true;
+                        }
+                    });
+                }
+                updateNextButtonState();
+            }
+
+            function toggleManualAddForm() {
+                const isHidden = manualAddFormContainer.style.display === 'none';
+                manualAddFormContainer.style.display = isHidden ? 'block' : 'none';
+                if (isHidden) {
+                    manualCodeInput.value = `CODE${manualStockCounter}`;
+                    manualNameInput.value = `自选股${manualStockCounter}`;
+                }
+            }
+
+            function handleManualAdd(event) {
+                event.preventDefault();
+                const newStock = {
+                    '证券代码': document.getElementById('manual-code').value,
+                    '证券名称': document.getElementById('manual-name').value,
+                    '当前价': document.getElementById('manual-price').value,
+                    '成本价': document.getElementById('manual-cost').value,
+                    '证券数量': document.getElementById('manual-quantity').value,
+                };
+
+                if (!newStock['证券代码'] || !newStock['证券名称'] || !newStock['当前价'] || !newStock['成本价'] || !newStock['证券数量']) {
+                    alert('所有字段均为必填项。');
+                    return;
+                }
+                const price = parseFloat(newStock['当前价']);
+                const cost = parseFloat(newStock['成本价']);
+                const quantity = parseFloat(newStock['证券数量']);
+
+                if (isNaN(price) || price <= 0 || isNaN(cost) || cost <= 0 || isNaN(quantity) || quantity <= 0) {
+                    alert('价格和数量必须为正数。');
+                    return;
+                }
+
+                fullStockData.push(newStock);
+                manualStockCounter++;
+                
+                manualAddForm.reset();
+                manualCodeInput.value = `CODE${manualStockCounter}`;
+                manualNameInput.value = `自选股${manualStockCounter}`;
+                
+                displayStockTable(fullStockData);
+            }
+            
+            function handleFileSelect(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+
+                fileNameDisplay.textContent = `已选择文件: ${file.name}`;
+                
+                const reader = new FileReader();
+                reader.readAsText(file, 'UTF-8');
+
+                reader.onerror = () => {
+                    alert("文件读取失败。");
+                };
+
+                reader.onload = () => {
+                    try {
+                        const text = reader.result;
+                        let lines = text.trim().split(/\r?\n/);
+                        if (lines.length < 2) {
+                            alert('CSV文件为空或格式不正确。');
+                            return;
+                        }
+
+                        if (lines[0].charCodeAt(0) === 0xFEFF) {
+                            lines[0] = lines[0].substring(1);
+                        }
+
+                        const headers = lines[0].split('\t').map(h => h.trim());
+                        
+                        const requiredColNames = {
+                            code: '证券代码',
+                            name: '证券名称',
+                            quantity: '证券数量',
+                            cost: '成本价',
+                            price: '当前价'
+                        };
+
+                        const colIndices = {
+                            code: headers.indexOf(requiredColNames.code),
+                            name: headers.indexOf(requiredColNames.name),
+                            quantity: headers.indexOf(requiredColNames.quantity),
+                            cost: headers.indexOf(requiredColNames.cost),
+                            price: headers.indexOf(requiredColNames.price)
+                        };
+
+                        for (const key in colIndices) {
+                            if (colIndices[key] === -1) {
+                                alert(`解析失败: CSV文件中未找到必需的表头 '${requiredColNames[key]}'.`);
+                                return;
+                            }
+                        }
+
+                        const data = lines.slice(1).map(line => {
+                            const values = line.split('\t');
+                            const quantityStr = values[colIndices.quantity];
+                            const quantity = quantityStr ? parseFloat(quantityStr) : 0;
+                            const priceStr = values[colIndices.price];
+                             const costStr = values[colIndices.cost];
+
+                            if (values.length > Math.max(...Object.values(colIndices)) && !isNaN(quantity) && quantity > 0) {
+                                return {
+                                    '证券代码': values[colIndices.code]?.trim(),
+                                    '证券名称': values[colIndices.name]?.trim(),
+                                    '证券数量': quantityStr.trim(),
+                                    '成本价': costStr?.trim(),
+                                    '当前价': priceStr?.trim()
+                                };
+                            }
+                            return null;
+                        }).filter(row => row); 
+
+                        fullStockData = data;
+                        
+                        if (fullStockData.length === 0) {
+                             alert("警告: 未在文件中找到任何有效的持仓数据 (持仓数量 > 0)。");
+                        }
+
+                        displayStockTable(fullStockData);
+                    } catch (e) {
+                         console.error("CSV解析时发生致命错误:", e);
+                         alert("文件解析失败，请按 F12 查看控制台中的错误日志。");
+                    }
+                };
+            }
+            
+            function displayStockTable(data) {
+                if (data.length === 0) {
+                    stockTableContainer.innerHTML = '<p style="text-align:center; color: #888; margin-top: 20px;">暂无持仓数据, 请通过文件或手动方式添加.</p>';
+                    updateNextButtonState();
+                    return;
+                }
+
+                let tableHtml = `
+                    <div style="margin-bottom: 10px; margin-top: 20px;">
+                        <button id="select-all-btn" class="secondary-button">全选</button>
+                        <button id="invert-selection-btn" class="secondary-button" style="margin-left: 10px;">反选</button>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>选择</th>
+                                <th>证券代码</th>
+                                <th>证券名称</th>
+                                <th>持仓数量</th>
+                                <th>成本价</th>
+                                <th>当前价</th>
+                                <th style="text-align: center;">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+                data.forEach((row, index) => {
+                    tableHtml += `
+                        <tr data-row-index="${index}">
+                            <td><input type="checkbox" class="stock-checkbox" data-index="${index}"></td>
+                            <td>${row['证券代码']}</td>
+                            <td>${row['证券名称']}</td>
+                            <td class="editable" data-index="${index}" data-field="证券数量" contenteditable="true">${parseFloat(row['证券数量']).toLocaleString()}</td>
+                            <td class="editable" data-index="${index}" data-field="成本价" contenteditable="true">${parseFloat(row['成本价']).toFixed(3)}</td>
+                            <td class="editable" data-index="${index}" data-field="当前价" contenteditable="true">${parseFloat(row['当前价']).toFixed(3)}</td>
+                            <td style="text-align: center;"><button class="delete-btn" data-index="${index}" style="background-color: var(--danger-color); padding: 5px 10px; font-size: 14px;">删除</button></td>
+                        </tr>
+                    `;
+                });
+                tableHtml += '</tbody></table>';
+                stockTableContainer.innerHTML = tableHtml;
+                updateNextButtonState();
+            }
+
+            function updateNextButtonState() {
+                const anyChecked = document.querySelectorAll('.stock-checkbox:checked').length > 0;
+                nextButton.disabled = !anyChecked;
+            }
+
+            function showCalculationScreen() {
+                selectedStocks = [];
+                const checkedBoxes = document.querySelectorAll('.stock-checkbox:checked');
+                checkedBoxes.forEach(box => {
+                    const index = parseInt(box.dataset.index, 10);
+                    selectedStocks.push(fullStockData[index]);
+                });
+
+                if (selectedStocks.length === 0) {
+                    alert('请至少选择一支股票');
+                    return;
+                }
+
+                buildCalculationForms();
+                selectionScreen.classList.remove('active');
+                calculationScreen.classList.add('active');
+                resultsContainer.innerHTML = '';
+            }
+            
+            function showSelectionScreen() {
+                calculationScreen.classList.remove('active');
+                selectionScreen.classList.add('active');
+                 // Selections are preserved, so we don't reset checkboxes here
+                updateNextButtonState();
+            }
+
+            function buildCalculationForms() {
+                let formsHtml = '';
+                selectedStocks.forEach((stock, index) => {
+                     const baseVolume = Math.floor(parseFloat(stock['证券数量']) / 100);
+                     const currentPrice = parseFloat(stock['当前价']);
+                    formsHtml += `
+                        <div class="form-group" data-stock-index="${index}">
+                            <p class="stock-title">${stock['证券名称']} (${stock['证券代码']})</p>
+                            <input type="hidden" name="stockIndex" value="${index}">
+                            <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+                                <div style="flex: 1 1 200px;">
+                                    <label for="price-limit-${index}">涨跌停幅 (%):</label>
+                                    <input type="number" id="price-limit-${index}" name="priceLimit" step="1" value="10" required>
+                                </div>
+                                <div style="flex: 1 1 200px;">
+                                    <label for="base-volume-${index}">基准交易量 (手):</label>
+                                    <input type="number" id="base-volume-${index}" name="baseVolume" step="1" value="${baseVolume}" required placeholder="1手 = 100股">
+                                </div>
+                            </div>
+                            <div style="margin-top: 10px;">
+                                <label for="support-price-${index}">预计支撑位 (元):</label>
+                                <input type="number" id="support-price-${index}" name="supportPrice" step="0.01" value="${currentPrice.toFixed(2)}" required>
+                                <small id="support-warning-${index}" style="color:red;"></small>
+                            </div>
+                            <div style="margin-top: 10px;">
+                                <label for="desired-profit-${index}">期望总盈利 (元):</label>
+                                <input type="number" id="desired-profit-${index}" name="desiredProfit" step="1" required value="0" placeholder="0 表示不盈不亏">
+                                <small id="profit-warning-${index}" style="color:red;"></small>
+                            </div>
+                            <div style="margin-top: 15px;">
+                                <label>计划方案:</label>
+                                <input type="checkbox" id="plan-decrease-${index}" name="planDecrease" checked style="width: auto; margin-left: 10px;">
+                                <label for="plan-decrease-${index}" style="font-weight: normal; display: inline-block; margin-right: 15px;">减仓</label>
+                                <input type="checkbox" id="plan-increase-${index}" name="planIncrease" checked style="width: auto;">
+                                <label for="plan-increase-${index}" style="font-weight: normal; display: inline-block;">加仓</label>
+                            </div>
+                        </div>
+                    `;
+                });
+                calculationFormsContainer.innerHTML = formsHtml;
+
+                calculationFormsContainer.querySelectorAll('.form-group').forEach(form => {
+                    const index = form.dataset.stockIndex;
+                    form.querySelector(`#price-limit-${index}`).addEventListener('input', () => handlePriceValidation(index));
+                    form.querySelector(`#support-price-${index}`).addEventListener('input', () => handlePriceValidation(index));
+                    form.querySelector(`#desired-profit-${index}`).addEventListener('input', () => handlePriceValidation(index));
+                    handlePriceValidation(index); // Validate on form build
+                });
+            }
+
+            function handlePriceValidation(index) {
+                const stock = selectedStocks[index];
+                if (!stock) return; // Exit if stock is not in selection
+                
+                const form = calculationFormsContainer.querySelector(`.form-group[data-stock-index="${index}"]`);
+                if (!form) return; // Exit if form not visible
+                
+                const priceLimitInput = form.querySelector(`#price-limit-${index}`);
+                const supportPriceInput = form.querySelector(`#support-price-${index}`);
+                const desiredProfitInput = form.querySelector(`#desired-profit-${index}`);
+                
+                const supportWarningEl = form.querySelector(`#support-warning-${index}`);
+                const profitWarningEl = form.querySelector(`#profit-warning-${index}`);
+
+                const priceLimit = parseFloat(priceLimitInput.value) || 10;
+                const currentPrice = parseFloat(stock['当前价']);
+                const costPrice = parseFloat(stock['成本价']);
+                
+                const lowerLimit = currentPrice * (1 - priceLimit / 100);
+                const upperLimit = currentPrice * (1 + priceLimit / 100);
+
+                const supportPrice = parseFloat(supportPriceInput.value);
+                if (!isNaN(supportPrice) && supportPrice < lowerLimit) {
+                    supportWarningEl.textContent = `注意: 此价位低于次日跌停价 (${lowerLimit.toFixed(2)})。`;
+                } else if (!isNaN(supportPrice) && supportPrice > upperLimit) {
+                    supportWarningEl.textContent = `注意: 此价位高于次日涨停价 (${upperLimit.toFixed(2)})。`;
+                } else {
+                    supportWarningEl.textContent = '';
+                }
+
+                const desiredProfit = parseFloat(desiredProfitInput.value);
+                if (!isNaN(desiredProfit)) {
+                    const currentQuantity = parseFloat(stock['证券数量']);
+                    const totalCost = currentQuantity * costPrice;
+                    
+                    const baseVolumeInput = form.querySelector(`input[name="baseVolume"]`);
+                    const baseVolume = (baseVolumeInput ? parseFloat(baseVolumeInput.value) : (currentQuantity / 100)) * 100;
+                    
+                    const sellQuantity = Math.floor(baseVolume / 100) * 100 > currentQuantity ? currentQuantity : Math.floor(baseVolume / 100) * 100;
+
+                    if (sellQuantity > 0) {
+                        const numerator = desiredProfit + totalCost - (currentQuantity - sellQuantity) * (supportPrice || 0);
+                        const denominator = sellQuantity * (1 - COMMISSION_RATE);
+                        if (denominator > 0) {
+                            const requiredSellPrice = numerator / denominator;
+                            if (requiredSellPrice > upperLimit) {
+                                profitWarningEl.textContent = `警告: 为达此盈利, 至少需要价格达到 ${requiredSellPrice.toFixed(2)} 元, 已超出次日涨停价 (${upperLimit.toFixed(2)})。`;
+                            } else {
+                                profitWarningEl.textContent = '';
+                            }
+                        } else {
+                           profitWarningEl.textContent = '';
+                        }
+                    } else {
+                        profitWarningEl.textContent = '';
+                    }
+                } else {
+                     profitWarningEl.textContent = '';
+                }
+            }
+
+            function handleCalculation(event) {
+                event.preventDefault();
+                resultsContainer.innerHTML = '';
+
+                const forms = calculationFormsContainer.querySelectorAll('.form-group');
+                forms.forEach(form => {
+                    const stockIndex = form.querySelector('input[name="stockIndex"]').value;
+                    const supportPrice = parseFloat(form.querySelector('input[name="supportPrice"]').value);
+                    const desiredProfit = parseFloat(form.querySelector('input[name="desiredProfit"]').value);
+                    const priceLimit = parseFloat(form.querySelector('input[name="priceLimit"]').value);
+                    const baseVolume = parseFloat(form.querySelector('input[name="baseVolume"]').value) * 100; // in shares
+                    
+                    const runDecrease = form.querySelector('input[name="planDecrease"]').checked;
+                    const runIncrease = form.querySelector('input[name="planIncrease"]').checked;
+
+                    if (!runDecrease && !runIncrease) {
+                        return; // Skip this stock if no plan is selected
+                    }
+
+                    const stock = selectedStocks[stockIndex];
+
+                    if (isNaN(supportPrice) || isNaN(priceLimit) || isNaN(baseVolume)) {
+                        alert(`请为 ${stock['证券名称']} 输入有效的参数!`);
+                        return;
+                    }
+
+                    const results = { decrease: [], increase: [] };
+                    if (runDecrease) {
+                        results.decrease = calculateDecreasePlan(stock, supportPrice, desiredProfit, baseVolume);
+                    }
+                    if (runIncrease) {
+                        results.increase = calculateIncreasePlan(stock, supportPrice, desiredProfit, baseVolume);
+                    }
+                    
+                    displayResult(stock, results, supportPrice, desiredProfit, priceLimit);
+                });
+            }
+
+            function calculateDecreasePlan(stock, supportPrice, desiredProfit, baseVolume) {
+                const plans = [];
+                const currentQuantity = parseFloat(stock['证券数量']);
+                const costPrice = parseFloat(stock['成本价']);
+                const totalCost = currentQuantity * costPrice;
+
+                const sellPortions = [0.25, 0.3333, 0.5, 0.75, 1.0];
+
+                for (const portion of sellPortions) {
+                    const sellQuantity = Math.floor(baseVolume * portion / 100) * 100;
+                    if (sellQuantity === 0 || sellQuantity > currentQuantity) continue;
+                    
+                    const numerator = desiredProfit + totalCost - (currentQuantity - sellQuantity) * supportPrice;
+                    const denominator = sellQuantity * (1 - COMMISSION_RATE);
+                    
+                    if (denominator === 0) continue;
+
+                    const requiredSellPrice = numerator / denominator;
+
+                    if (requiredSellPrice > 0) {
+                         plans.push({
+                            sellQuantity: sellQuantity,
+                            sellPortion: portion,
+                            requiredSellPrice: requiredSellPrice
+                        });
+                    }
+                }
+                return plans;
+            }
+
+            function calculateIncreasePlan(stock, supportPrice, desiredProfit, baseVolume) {
+                const plans = [];
+                const currentQuantity = parseFloat(stock['证券数量']);
+                const costPrice = parseFloat(stock['成本价']);
+                const totalCost = currentQuantity * costPrice;
+
+                // Increase by portions of current holdings
+                const buyPortions = [0.1, 0.25, 0.5, 1.0]; 
+
+                for (const portion of buyPortions) {
+                    const buyQuantity = Math.floor(baseVolume * portion / 100) * 100;
+                    if (buyQuantity === 0) continue;
+
+                    // desiredProfit = (newQuantity * supportPrice) - newTotalCost
+                    // desiredProfit = (currentQuantity + buyQuantity) * supportPrice - (totalCost + buyQuantity * buyPrice)
+                    // buyQuantity * buyPrice = (currentQuantity + buyQuantity) * supportPrice - totalCost - desiredProfit
+                    const numerator = (currentQuantity + buyQuantity) * supportPrice - totalCost - desiredProfit;
+                    const denominator = buyQuantity;
+
+                    if (denominator === 0) continue;
+                    
+                    const requiredBuyPrice = numerator / denominator;
+
+                    if (requiredBuyPrice > 0) {
+                        plans.push({
+                            buyQuantity: buyQuantity,
+                            buyPortion: portion,
+                            requiredBuyPrice: requiredBuyPrice
+                        });
+                    }
+                }
+                return plans;
+            }
+
+            function displayResult(stock, results, supportPrice, desiredProfit, priceLimit) {
+                 const costPrice = parseFloat(stock['成本价']);
+                 const currentPrice = parseFloat(stock['当前价']);
+                 const upperLimit = currentPrice * (1 + priceLimit / 100);
+                 const lowerLimit = currentPrice * (1 - priceLimit / 100);
+
+                 let supportPriceWarning = '';
+                 if (supportPrice < lowerLimit) {
+                     supportPriceWarning = `<span style="color: var(--danger-color); font-weight: bold;"> (低于跌停价)</span>`;
+                 } else if (supportPrice > upperLimit) {
+                     supportPriceWarning = `<span style="color: var(--danger-color); font-weight: bold;"> (高于涨停价)</span>`;
+                 }
+
+                let resultHtml = `
+                    <div class="result-card">
+                        <h3>综合方案: ${stock['证券名称']} (${stock['证券代码']})</h3>
+                        <p>
+                            <strong>参数:</strong> 
+                            持仓: ${parseFloat(stock['证券数量']).toLocaleString()}股, 
+                            成本: ${costPrice.toFixed(3)}元, 
+                            当前价: ${currentPrice.toFixed(3)}元, 
+                            支撑位: ${supportPrice.toFixed(2)}元${supportPriceWarning}, 
+                            期望盈利: ${desiredProfit.toLocaleString()}元
+                        </p>
+                        <p>
+                            <strong>风控:</strong> 
+                            次日涨停价: ${upperLimit.toFixed(2)}元,
+                            次日跌停价: ${lowerLimit.toFixed(2)}元
+                        </p>
+                        <hr>`;
+                
+                // Display Decrease Plans
+                if (results.decrease && results.decrease.length > 0) {
+                     resultHtml += '<h4>减仓计划 (卖出)</h4><ul>';
+                     results.decrease.forEach(plan => {
+                         const totalAmount = plan.sellQuantity * plan.requiredSellPrice;
+                         const isActionable = plan.requiredSellPrice <= upperLimit;
+                         const amountStyle = isActionable ? 'color: var(--success-color); font-weight: bold;' : '';
+
+                         resultHtml += `
+                            <li>
+                                若卖出 <strong>${plan.sellQuantity.toLocaleString()}</strong> 股 (~${(plan.sellPortion * 100).toFixed(0)}% of base),
+                                挂单价需为 <strong>${plan.requiredSellPrice.toFixed(3)}</strong> 元.
+                                (交易金额: <span style="${amountStyle}">${totalAmount.toLocaleString('zh-CN', { style: 'currency', currency: 'CNY' })}</span>)
+                            </li>
+                         `;
+                     });
+                     resultHtml += '</ul>';
+                }
+
+                // Display Increase Plans
+                if (results.increase && results.increase.length > 0) {
+                     resultHtml += '<h4>加仓计划 (买入)</h4><ul>';
+                     results.increase.forEach(plan => {
+                         const totalAmount = plan.buyQuantity * plan.requiredBuyPrice;
+                         const isActionable = plan.requiredBuyPrice >= lowerLimit;
+                         const amountStyle = isActionable ? 'color: var(--success-color); font-weight: bold;' : '';
+
+                         resultHtml += `
+                            <li>
+                                若买入 <strong>${plan.buyQuantity.toLocaleString()}</strong> 股 (~${(plan.buyPortion * 100).toFixed(0)}% of base),
+                                挂单价需低于 <strong>${plan.requiredBuyPrice.toFixed(3)}</strong> 元.
+                                (交易金额: <span style="${amountStyle}">${totalAmount.toLocaleString('zh-CN', { style: 'currency', currency: 'CNY' })}</span>)
+                            </li>
+                         `;
+                     });
+                     resultHtml += '</ul>';
+                }
+
+                if ((!results.decrease || results.decrease.length === 0) && (!results.increase || results.increase.length === 0)) {
+                    resultHtml += '<p style="color: var(--danger-color);">根据所选方案和参数，无法计算出可行的交易计划。</p>';
+                }
+
+                resultHtml += '</div>';
+                resultsContainer.innerHTML += resultHtml;
+            }
+
+        });
+    </script>
+</body>
+</html>
